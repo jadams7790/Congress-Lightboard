@@ -4,6 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Congress Simulation Lightboard 180 Bills</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyB0Scx7kkt3yY0TVIrPTMLtER1sqBW31cU",
+    authDomain: "congreightboard.firebaseapp.com",
+    projectId: "congreightboard",
+    storageBucket: "congreightboard.firebasestorage.app",
+    messagingSenderId: "442171722171",
+    appId: "1:442171722171:web:167640f2e6986056605c9e"
+  };
+
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+  
 <style>
   body { font-family: Arial, sans-serif; background: #111; color: #fff; margin: 20px; }
   h1 { text-align: center; margin-bottom: 10px; }
@@ -51,6 +75,7 @@
 
 <div class="controls">
   <button id="resetBtn">🔁 Reset All Bills</button>
+  <button id="saveBtn">☁️ Save to Cloud</button>
 </div>
 
 <div class="dashboard" id="dashboard">
@@ -58,27 +83,6 @@
 </div>
 
 <div id="lightboard" class="bill-container"></div>
-
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyB0Scx7kkt3yY0TVIrPTMLtER1sqBW31cU",
-    authDomain: "congreightboard.firebaseapp.com",
-    projectId: "congreightboard",
-    storageBucket: "congreightboard.firebasestorage.app",
-    messagingSenderId: "442171722171",
-    appId: "1:442171722171:web:167640f2e6986056605c9e"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-</script>
-  
   
 <script>
 const CLASS_ID = "ClassA_180";
@@ -236,20 +240,45 @@ function updateCommitteeLists() {
   });
 }
 
-function saveData() {
-  const allBills = document.querySelectorAll(".bill");
-  const saveObj = {};
-  allBills.forEach(bill => {
-    const num = bill.querySelector("h2").textContent.split(" ")[1];
-    saveObj[num] = bill.lights.map(l => l.classList[1]);
-  });
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(saveObj));
-}
+<script>
+  function saveToFirebase() {
+    const allBills = document.querySelectorAll(".bill");
+    const saveObj = {};
 
-function loadData() {
-  const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : {};
-}
+    allBills.forEach(bill => {
+      const num = bill.querySelector("h2").textContent.split(" ")[1];
+      const lights = [...bill.querySelectorAll(".light")];
+      saveObj[num] = lights.map(l => l.classList[1]);
+    });
+
+    db.collection("lightboard").doc("ClassA").set({ data: saveObj })
+      .then(() => console.log("Saved to Firebase"))
+      .catch(err => console.error("Error saving:", err));
+  }
+</script>
+
+
+<script>
+  function loadFromFirebase(callback) {
+    db.collection("lightboard").doc("ClassA").get()
+      .then(doc => {
+        if (doc.exists) {
+          const savedData = doc.data().data;
+          console.log("Loaded board from Firebase");
+          callback(savedData);
+        } else {
+          console.log("No saved data found, starting fresh");
+          callback({});
+        }
+      })
+      .catch(err => console.error("Error loading:", err));
+  }
+
+  // Example call — replace your localStorage load with this:
+  loadFromFirebase(savedData => {
+    initializeBoard(savedData); // whatever your setup function is
+  });
+</script>
 
 function resetAll() {
   if (confirm("Reset all bills?")) {
@@ -286,8 +315,26 @@ function initializeBoard() {
   updateCommitteeLists();
 }
 
+    <script>
+  function saveToFirebase() {
+    const allBills = document.querySelectorAll(".bill");
+    const saveObj = {};
+
+    allBills.forEach(bill => {
+      const num = bill.querySelector("h2").textContent.split(" ")[1];
+      const lights = [...bill.querySelectorAll(".light")];
+      saveObj[num] = lights.map(l => l.classList[1]);
+    });
+
+    db.collection("lightboard").doc("ClassA").set({ data: saveObj })
+      .then(() => alert("✅ Progress saved to cloud!"))
+      .catch(err => alert("❌ Save failed: " + err.message));
+  }
+</script>
+
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("resetBtn").addEventListener("click", resetAll);
+  document.getElementById("saveBtn").addEventListener("click", saveToFirebase);  
   initializeBoard();
 });
 </script>
