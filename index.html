@@ -1,343 +1,263 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Congress Simulation Lightboard 180 Bills</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Congress Simulation Lightboard (180 Bills)</title>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
-  // https://firebase.google.com/docs/web/setup#available-libraries
+  <!-- Firebase compat libraries -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyB0Scx7kkt3yY0TVIrPTMLtER1sqBW31cU",
-    authDomain: "congreightboard.firebaseapp.com",
-    projectId: "congreightboard",
-    storageBucket: "congreightboard.firebasestorage.app",
-    messagingSenderId: "442171722171",
-    appId: "1:442171722171:web:167640f2e6986056605c9e"
-  };
-
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-</script>
-  
-<style>
-  body { font-family: Arial, sans-serif; background: #111; color: #fff; margin: 20px; }
-  h1 { text-align: center; margin-bottom: 10px; }
-  .top-container { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 15px; }
-  .committee-panel { flex: 1; padding: 10px; border-radius: 8px; background: #1b1b1b; max-height: 400px; overflow-y: auto; }
-  .house-panel { border: 2px solid #00c853; }
-  .senate-panel { border: 2px solid #2196f3; }
-  .committee-panel h3 { text-align: center; margin-top: 0; cursor: pointer; }
-  .committee-list { min-height: 60px; background: #222; padding: 8px; border-radius: 6px; font-size: 0.9em; }
-  .collapsed { display: none; }
-  .controls { text-align: center; margin-bottom: 10px; }
-  button { background: #d50000; color: white; border: none; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-weight: bold; }
-  button:hover { background: #ff1744; }
-  .dashboard { text-align: center; margin-bottom: 15px; font-weight: bold; }
-  .bill-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
-  .bill { border: 1px solid #444; border-radius: 10px; padding: 10px; background: #222; }
-  .bill h2 { text-align: center; font-size: 1.1em; margin-bottom: 10px; }
-  .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
-  .light-wrapper { display: flex; flex-direction: column; align-items: center; }
-  .light { width: 25px; height: 25px; border-radius: 50%; background: gray; cursor: pointer; border: 2px solid #555; margin-bottom: 4px; }
-  .light.green { background: #00c853; }
-  .light.red { background: #d50000; }
-  .light.gray { background: gray; }
-  .status { margin-top: 6px; text-align: center; font-weight: bold; }
-  .status.green { color: #00c853; }
-  .status.red { color: #d50000; }
-  .status.yellow { color: #ffd600; }
-  .status.gray { color: gray; }
-</style>
+  <style>
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; margin: 20px; }
+    h1 { text-align: center; margin-bottom: 10px; }
+    .top-container { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 15px; }
+    .committee-panel { flex: 1; padding: 10px; border-radius: 8px; background: #1b1b1b; max-height: 400px; overflow-y: auto; }
+    .house-panel { border: 2px solid #00c853; }
+    .senate-panel { border: 2px solid #2196f3; }
+    .committee-panel h3 { text-align: center; margin-top: 0; cursor: pointer; }
+    .committee-list { min-height: 60px; background: #222; padding: 8px; border-radius: 6px; font-size: 0.9em; }
+    .collapsed { display: none; }
+    .controls { text-align: center; margin-bottom: 10px; }
+    button { background: #d50000; color: white; border: none; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #ff1744; }
+    .dashboard { text-align: center; margin-bottom: 15px; font-weight: bold; }
+    .bill-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
+    .bill { border: 1px solid #444; border-radius: 10px; padding: 10px; background: #222; }
+    .bill h2 { text-align: center; font-size: 1.1em; margin-bottom: 10px; }
+    .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
+    .light-wrapper { display: flex; flex-direction: column; align-items: center; }
+    .light { width: 25px; height: 25px; border-radius: 50%; background: gray; cursor: pointer; border: 2px solid #555; margin-bottom: 4px; }
+    .light.green { background: #00c853; }
+    .light.red { background: #d50000; }
+    .light.gray { background: gray; }
+    .status { margin-top: 6px; text-align: center; font-weight: bold; }
+    .status.green { color: #00c853; }
+    .status.red { color: #d50000; }
+    .status.yellow { color: #ffd600; }
+    .status.gray { color: gray; }
+  </style>
 </head>
+
 <body>
+  <h1>Congressional Lightboard Tracker</h1>
 
-<h1>Congressional Lightboard Tracker</h1>
-
-<div class="top-container">
-  <div class="committee-panel house-panel">
-    <h3 onclick="this.nextElementSibling.classList.toggle('collapsed')">🏛️ House Committee Passed</h3>
-    <div id="houseCommitteeList" class="committee-list"></div>
+  <div class="top-container">
+    <div class="committee-panel house-panel">
+      <h3 onclick="this.nextElementSibling.classList.toggle('collapsed')">🏛️ House Committee Passed</h3>
+      <div id="houseCommitteeList" class="committee-list"></div>
+    </div>
+    <div class="committee-panel senate-panel">
+      <h3 onclick="this.nextElementSibling.classList.toggle('collapsed')">🏛️ Senate Committee Passed</h3>
+      <div id="senateCommitteeList" class="committee-list"></div>
+    </div>
   </div>
-  <div class="committee-panel senate-panel">
-    <h3 onclick="this.nextElementSibling.classList.toggle('collapsed')">🏛️ Senate Committee Passed</h3>
-    <div id="senateCommitteeList" class="committee-list"></div>
+
+  <div class="controls">
+    <button id="resetBtn">🔁 Reset All Bills</button>
+    <button id="saveBtn">☁️ Save to Cloud</button>
   </div>
-</div>
 
-<div class="controls">
-  <button id="resetBtn">🔁 Reset All Bills</button>
-  <button id="saveBtn">☁️ Save to Cloud</button>
-</div>
+  <div class="dashboard" id="dashboard">No Action: 0 | In Progress: 0 | Failed: 0 | Law: 0</div>
+  <div id="lightboard" class="bill-container"></div>
 
-<div class="dashboard" id="dashboard">
-  No Action: 0 | In Progress: 0 | Failed: 0 | Law: 0
-</div>
+  <script>
+    // ---- Firebase Init ----
+    const firebaseConfig = {
+      apiKey: "AIzaSyB0Scx7kkt3yY0TVIrPTMLtER1sqBW31cU",
+      authDomain: "congreightboard.firebaseapp.com",
+      projectId: "congreightboard",
+      storageBucket: "congreightboard.appspot.com",
+      messagingSenderId: "442171722171",
+      appId: "1:442171722171:web:167640f2e6986056605c9e"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-<div id="lightboard" class="bill-container"></div>
-  
-<script>
-const CLASS_ID = "ClassA_180";
-const STORAGE_KEY = `lightboard_data_${CLASS_ID}`;
-const actionList = [
-  { name: "Introduced (H)", key: "introH" },
-  { name: "Introduced (S)", key: "introS" },
-  { name: "Committee (H)", key: "commH" },
-  { name: "Committee (S)", key: "commS" },
-  { name: "Amendments (H)", key: "amendH" },
-  { name: "Amendments (S)", key: "amendS" },
-  { name: "Passed (H)", key: "passedH" },
-  { name: "Passed (S)", key: "passedS" },
-  { name: "Signed (P)", key: "signedP" }
-];
-let houseSelectionOrder = [];
-let senateSelectionOrder = [];
+    // ---- Core Logic ----
+    const CLASS_ID = "ClassA_180";
+    const actionList = [
+      { name: "Introduced (H)", key: "introH" },
+      { name: "Introduced (S)", key: "introS" },
+      { name: "Committee (H)", key: "commH" },
+      { name: "Committee (S)", key: "commS" },
+      { name: "Amendments (H)", key: "amendH" },
+      { name: "Amendments (S)", key: "amendS" },
+      { name: "Passed (H)", key: "passedH" },
+      { name: "Passed (S)", key: "passedS" },
+      { name: "Signed (P)", key: "signedP" }
+    ];
+    let houseSelectionOrder = [];
+    let senateSelectionOrder = [];
 
-function createBillElement(billNumber, savedData) {
-  const billDiv = document.createElement("div");
-  billDiv.className = "bill";
+    function createBillElement(billNumber, savedData) {
+      const billDiv = document.createElement("div");
+      billDiv.className = "bill";
+      const title = document.createElement("h2");
+      title.textContent = "Bill " + billNumber;
+      billDiv.appendChild(title);
 
-  const title = document.createElement("h2");
-  title.textContent = "Bill " + billNumber;
-  billDiv.appendChild(title);
+      const actionsDiv = document.createElement("div");
+      actionsDiv.className = "actions";
+      const lights = [];
 
-  const actionsDiv = document.createElement("div");
-  actionsDiv.className = "actions";
-  const lights = [];
+      actionList.forEach(actionObj => {
+        const wrap = document.createElement("div");
+        wrap.className = "light-wrapper";
+        const light = document.createElement("div");
+        light.className = "light gray";
+        light.dataset.key = actionObj.key;
+        light.title = actionObj.name;
+        wrap.appendChild(light);
+        const label = document.createElement("div");
+        label.style.fontSize = "0.65em";
+        label.textContent = actionObj.name;
+        wrap.appendChild(label);
 
-  actionList.forEach(actionObj => {
-    const wrap = document.createElement("div");
-    wrap.className = "light-wrapper";
+        light.addEventListener("click", () => {
+          const current = light.classList.contains("gray") ? "gray" :
+            light.classList.contains("green") ? "green" : "red";
+          const next = current === "gray" ? "green" : current === "green" ? "red" : "gray";
+          light.className = `light ${next}`;
+          updateOverallStatus(billDiv);
+          updateCommitteeLists();
+          updateDashboard();
+        });
 
-    const light = document.createElement("div");
-    light.className = "light gray";
-    light.title = actionObj.name;
-    light.dataset.key = actionObj.key;
-    wrap.appendChild(light);
+        actionsDiv.appendChild(wrap);
+        lights.push(light);
+      });
 
-    const label = document.createElement("div");
-    label.style.fontSize = "0.65em";
-    label.textContent = actionObj.name;
-    wrap.appendChild(label);
+      billDiv.appendChild(actionsDiv);
+      const statusDiv = document.createElement("div");
+      statusDiv.className = "status gray";
+      statusDiv.textContent = "No Action";
+      billDiv.appendChild(statusDiv);
+      billDiv.lights = lights;
+      billDiv.statusDiv = statusDiv;
 
-    light.addEventListener("click", () => {
-      const currentColor = light.classList.contains("gray") ? "gray" : light.classList.contains("green") ? "green" : "red";
-      const nextColor = currentColor === "gray" ? "green" : currentColor === "green" ? "red" : "gray";
-      light.className = `light ${nextColor}`;
-      updateOverallStatus(billDiv);
-      updateCommitteeLists();
-      saveData();
+      if (savedData) {
+        actionList.forEach((a, i) => {
+          if (savedData[i]) lights[i].className = `light ${savedData[i]}`;
+        });
+        updateOverallStatus(billDiv);
+      }
+
+      return billDiv;
+    }
+
+    function updateOverallStatus(billDiv) {
+      const lights = billDiv.lights;
+      const getColor = k => lights.find(l => l.dataset.key === k)?.classList[1];
+      const introH = getColor("introH"), introS = getColor("introS");
+      const passedH = getColor("passedH"), passedS = getColor("passedS"), signedP = getColor("signedP");
+      const introduced = introH === "green" || introS === "green";
+      const bothFailed = passedH === "red" && passedS === "red";
+      const bothPassed = passedH === "green" && passedS === "green";
+      const failedPresident = signedP === "red";
+      let color = "yellow", text = "In Progress";
+      if (!introduced) { color = "gray"; text = "No Action"; }
+      else if (bothFailed || failedPresident) { color = "red"; text = "Failed"; }
+      else if (bothPassed && signedP === "green") { color = "green"; text = "Law"; }
+      billDiv.statusDiv.className = `status ${color}`;
+      billDiv.statusDiv.textContent = text;
+    }
+
+    function updateCommitteeLists() {
+      const houseList = document.getElementById("houseCommitteeList");
+      const senateList = document.getElementById("senateCommitteeList");
+      houseList.innerHTML = "";
+      senateList.innerHTML = "";
+      const allBills = document.querySelectorAll(".bill");
+
+      allBills.forEach(bill => {
+        const lights = bill.lights;
+        const getColor = k => lights.find(l => l.dataset.key === k)?.classList[1];
+        const commH = getColor("commH"), commS = getColor("commS");
+        const passedH = getColor("passedH"), passedS = getColor("passedS");
+        const amendH = getColor("amendH"), amendS = getColor("amendS");
+        const billNum = bill.querySelector("h2").textContent;
+        if (commH === "green" || passedS === "green") {
+          if (!houseSelectionOrder.includes(billNum)) houseSelectionOrder.push(billNum);
+        } else { houseSelectionOrder = houseSelectionOrder.filter(n => n !== billNum); }
+        if (commS === "green" || passedH === "green") {
+          if (!senateSelectionOrder.includes(billNum)) senateSelectionOrder.push(billNum);
+        } else { senateSelectionOrder = senateSelectionOrder.filter(n => n !== billNum); }
+      });
+
+      houseSelectionOrder.forEach(num => {
+        const bill = Array.from(allBills).find(b => b.querySelector("h2").textContent === num);
+        const amendH = bill.lights.find(l => l.dataset.key === "amendH").classList[1];
+        const passedS = bill.lights.find(l => l.dataset.key === "passedS").classList[1];
+        const div = document.createElement("div");
+        div.textContent = num + (amendH === "green" ? " *" : "") + (passedS === "green" ? " +" : "");
+        houseList.appendChild(div);
+      });
+      senateSelectionOrder.forEach(num => {
+        const bill = Array.from(allBills).find(b => b.querySelector("h2").textContent === num);
+        const amendS = bill.lights.find(l => l.dataset.key === "amendS").classList[1];
+        const passedH = bill.lights.find(l => l.dataset.key === "passedH").classList[1];
+        const div = document.createElement("div");
+        div.textContent = num + (amendS === "green" ? " *" : "") + (passedH === "green" ? " +" : "");
+        senateList.appendChild(div);
+      });
+    }
+
+    function updateDashboard() {
+      const allBills = document.querySelectorAll(".bill");
+      let noAction = 0, inProgress = 0, failed = 0, law = 0;
+      allBills.forEach(bill => {
+        const s = bill.statusDiv.textContent;
+        if (s === "No Action") noAction++;
+        else if (s === "In Progress") inProgress++;
+        else if (s === "Failed") failed++;
+        else if (s === "Law") law++;
+      });
+      document.getElementById("dashboard").textContent =
+        `No Action: ${noAction} | In Progress: ${inProgress} | Failed: ${failed} | Law: ${law}`;
+    }
+
+    async function saveToFirebase() {
+      const allBills = document.querySelectorAll(".bill");
+      const saveObj = {};
+      allBills.forEach(b => {
+        const num = b.querySelector("h2").textContent.split(" ")[1];
+        saveObj[num] = [...b.querySelectorAll(".light")].map(l => l.classList[1]);
+      });
+      try {
+        await db.collection("lightboard").doc(CLASS_ID).set({ data: saveObj });
+        alert("✅ Progress saved to Firebase");
+      } catch (e) { alert("❌ Save failed: " + e.message); }
+    }
+
+    async function loadFromFirebase() {
+      const docSnap = await db.collection("lightboard").doc(CLASS_ID).get();
+      return docSnap.exists ? docSnap.data().data : {};
+    }
+
+    function resetAll() {
+      if (confirm("Reset all bills?")) {
+        db.collection("lightboard").doc(CLASS_ID).set({ data: {} });
+        location.reload();
+      }
+    }
+
+    async function initializeBoard() {
+      const savedData = await loadFromFirebase();
+      const lightboard = document.getElementById("lightboard");
+      for (let i = 101; i <= 280; i++) {
+        lightboard.appendChild(createBillElement(i, savedData[i]));
+      }
       updateDashboard();
+      updateCommitteeLists();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initializeBoard();
+      document.getElementById("saveBtn").addEventListener("click", saveToFirebase);
+      document.getElementById("resetBtn").addEventListener("click", resetAll);
     });
-
-    actionsDiv.appendChild(wrap);
-    lights.push(light);
-  });
-
-  billDiv.appendChild(actionsDiv);
-
-  const statusDiv = document.createElement("div");
-  statusDiv.className = "status gray";
-  statusDiv.textContent = "No Action";
-  billDiv.appendChild(statusDiv);
-
-  billDiv.lights = lights;
-  billDiv.statusDiv = statusDiv;
-
-  if (savedData) {
-    actionList.forEach((actionObj, i) => {
-      if (savedData[i]) lights[i].className = `light ${savedData[i]}`;
-    });
-    updateOverallStatus(billDiv);
-  }
-
-  return billDiv;
-}
-
-function updateOverallStatus(billDiv) {
-  const lights = billDiv.lights;
-  const statusDiv = billDiv.statusDiv;
-
-  const getColor = key => lights.find(l => l.dataset.key === key)?.classList[1];
-  const introH = getColor("introH");
-  const introS = getColor("introS");
-  const passedH = getColor("passedH");
-  const passedS = getColor("passedS");
-  const signedP = getColor("signedP");
-
-  const introduced = introH === "green" || introS === "green";
-  const bothFailed = passedH === "red" && passedS === "red";
-  const bothPassed = passedH === "green" && passedS === "green";
-  const failedPresident = signedP === "red";
-
-  let statusColor = "yellow";
-  let statusText = "In Progress";
-
-  if (!introduced) { statusColor = "gray"; statusText = "No Action"; }
-  else if (bothFailed || failedPresident) { statusColor = "red"; statusText = "Failed"; }
-  else if (bothPassed && signedP === "green") { statusColor = "green"; statusText = "Law"; }
-  else { statusColor = "yellow"; statusText = "In Progress"; }
-
-  statusDiv.className = `status ${statusColor}`;
-  statusDiv.textContent = statusText;
-}
-
-function updateCommitteeLists() {
-  const houseList = document.getElementById("houseCommitteeList");
-  const senateList = document.getElementById("senateCommitteeList");
-  houseList.innerHTML = "";
-  senateList.innerHTML = "";
-
-  const allBills = document.querySelectorAll(".bill");
-  allBills.forEach(bill => {
-    const lights = bill.lights;
-    const getColor = key => lights.find(l => l.dataset.key === key)?.classList[1];
-    const commH = getColor("commH");
-    const commS = getColor("commS");
-    const passedH = getColor("passedH");
-    const passedS = getColor("passedS");
-    const amendH = getColor("amendH");
-    const amendS = getColor("amendS");
-    const billNum = bill.querySelector("h2").textContent;
-
-    // HOUSE panel
-    if (commH === "green" || passedS === "green") { if (!houseSelectionOrder.includes(billNum)) houseSelectionOrder.push(billNum); }
-    else { houseSelectionOrder = houseSelectionOrder.filter(n => n !== billNum); }
-
-    // SENATE panel
-    if (commS === "green" || passedH === "green") { if (!senateSelectionOrder.includes(billNum)) senateSelectionOrder.push(billNum); }
-    else { senateSelectionOrder = senateSelectionOrder.filter(n => n !== billNum); }
-  });
-
-  // Render HOUSE panel
-  houseSelectionOrder.forEach(billNum => {
-    const bill = Array.from(allBills).find(b => b.querySelector("h2").textContent === billNum);
-    const lights = bill.lights;
-    const amendH = lights.find(l => l.dataset.key === "amendH").classList[1];
-    const passedS = lights.find(l => l.dataset.key === "passedS").classList[1];
-    const li = document.createElement("div");
-    li.textContent = billNum + (amendH === "green" ? " *" : "") + (passedS === "green" ? " +" : "");
-    houseList.appendChild(li);
-  });
-
-  // Render SENATE panel
-  senateSelectionOrder.forEach(billNum => {
-    const bill = Array.from(allBills).find(b => b.querySelector("h2").textContent === billNum);
-    const lights = bill.lights;
-    const amendS = lights.find(l => l.dataset.key === "amendS").classList[1];
-    const passedH = lights.find(l => l.dataset.key === "passedH").classList[1];
-    const li = document.createElement("div");
-    li.textContent = billNum + (amendS === "green" ? " *" : "") + (passedH === "green" ? " +" : "");
-    senateList.appendChild(li);
-  });
-}
-
-<script>
-  function saveToFirebase() {
-    const allBills = document.querySelectorAll(".bill");
-    const saveObj = {};
-
-    allBills.forEach(bill => {
-      const num = bill.querySelector("h2").textContent.split(" ")[1];
-      const lights = [...bill.querySelectorAll(".light")];
-      saveObj[num] = lights.map(l => l.classList[1]);
-    });
-
-    db.collection("lightboard").doc("ClassA").set({ data: saveObj })
-      .then(() => console.log("Saved to Firebase"))
-      .catch(err => console.error("Error saving:", err));
-  }
-</script>
-
-
-<script>
-  function loadFromFirebase(callback) {
-    db.collection("lightboard").doc("ClassA").get()
-      .then(doc => {
-        if (doc.exists) {
-          const savedData = doc.data().data;
-          console.log("Loaded board from Firebase");
-          callback(savedData);
-        } else {
-          console.log("No saved data found, starting fresh");
-          callback({});
-        }
-      })
-      .catch(err => console.error("Error loading:", err));
-  }
-
-  // Example call — replace your localStorage load with this:
-  loadFromFirebase(savedData => {
-    initializeBoard(savedData); // whatever your setup function is
-  });
-</script>
-
-function resetAll() {
-  if (confirm("Reset all bills?")) {
-    localStorage.removeItem(STORAGE_KEY);
-    houseSelectionOrder = [];
-    senateSelectionOrder = [];
-    document.getElementById("lightboard").innerHTML = "";
-    initializeBoard();
-    updateDashboard();
-    updateCommitteeLists();
-  }
-}
-
-function updateDashboard() {
-  const allBills = document.querySelectorAll(".bill");
-  let noAction = 0, inProgress = 0, failed = 0, law = 0;
-  allBills.forEach(bill => {
-    const statusText = bill.statusDiv.textContent;
-    if (statusText === "No Action") noAction++;
-    else if (statusText === "In Progress") inProgress++;
-    else if (statusText === "Failed") failed++;
-    else if (statusText === "Law") law++;
-  });
-  document.getElementById("dashboard").textContent = `No Action: ${noAction} | In Progress: ${inProgress} | Failed: ${failed} | Law: ${law}`;
-}
-
-function initializeBoard() {
-  const lightboard = document.getElementById("lightboard");
-  const savedData = loadData();
-  for (let i = 101; i <= 280; i++) {
-    lightboard.appendChild(createBillElement(i, savedData[i]));
-  }
-  updateDashboard();
-  updateCommitteeLists();
-}
-
-    <script>
-  function saveToFirebase() {
-    const allBills = document.querySelectorAll(".bill");
-    const saveObj = {};
-
-    allBills.forEach(bill => {
-      const num = bill.querySelector("h2").textContent.split(" ")[1];
-      const lights = [...bill.querySelectorAll(".light")];
-      saveObj[num] = lights.map(l => l.classList[1]);
-    });
-
-    db.collection("lightboard").doc("ClassA").set({ data: saveObj })
-      .then(() => alert("✅ Progress saved to cloud!"))
-      .catch(err => alert("❌ Save failed: " + err.message));
-  }
-</script>
-
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("resetBtn").addEventListener("click", resetAll);
-  document.getElementById("saveBtn").addEventListener("click", saveToFirebase);  
-  initializeBoard();
-});
-</script>
-
+  </script>
 </body>
 </html>
