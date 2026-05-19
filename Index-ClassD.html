@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,62 +6,545 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Congress Simulation Lightboard (180 Bills)</title>
 
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
   <!-- Firebase compat libraries -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <style>
-    body { font-family: Arial, sans-serif; background: #111; color: #fff; margin: 20px; }
-    h1 { text-align: center; margin-bottom: 10px; }
-    .top-container { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 15px; }
-    .committee-panel { flex: 1; padding: 10px; border-radius: 8px; background: #1b1b1b; max-height: 400px; overflow-y: auto; }
-    .house-panel { border: 2px solid #00c853; }
-    .senate-panel { border: 2px solid #2196f3; }
-    .committee-panel h3 { text-align: center; margin-top: 0; cursor: pointer; }
-    .committee-list { min-height: 60px; background: #222; padding: 8px; border-radius: 6px; font-size: 0.9em; }
-    .collapsed { display: none; }
-    .controls { text-align: center; margin-bottom: 10px; }
-    button { background: #d50000; color: white; border: none; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-weight: bold; }
-    button:hover { background: #ff1744; }
-    .dashboard { text-align: center; margin-bottom: 15px; font-weight: bold; }
-    .bill-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
-    .bill { border: 1px solid #444; border-radius: 10px; padding: 10px; background: #222; }
-    .bill h2 { text-align: center; font-size: 1.1em; margin-bottom: 10px; }
-    .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
-    .light-wrapper { display: flex; flex-direction: column; align-items: center; }
-    .light { width: 25px; height: 25px; border-radius: 50%; background: gray; cursor: pointer; border: 2px solid #555; margin-bottom: 4px; }
-    .light.green { background: #00c853; }
-    .light.red { background: #d50000; }
-    .light.gray { background: gray; }
-    .status { margin-top: 6px; text-align: center; font-weight: bold; }
-    .status.green { color: #00c853; }
-    .status.red { color: #d50000; }
-    .status.yellow { color: #ffd600; }
-    .status.gray { color: gray; }
+    :root {
+      --bg: #f4f2ee;
+      --surface: #ffffff;
+      --surface-alt: #f9f8f6;
+      --border: #ddd8d0;
+      --border-strong: #c8c0b4;
+      --text: #1a1a1a;
+      --text-muted: #7a7060;
+      --accent-green: #1a7a3c;
+      --accent-green-light: #e8f5ee;
+      --accent-red: #b81c1c;
+      --accent-red-light: #fdf0f0;
+      --accent-blue: #1a4f8a;
+      --accent-blue-light: #eef4fc;
+      --accent-amber: #b86e00;
+      --accent-amber-light: #fdf6e8;
+      --gray: #b0a898;
+      --gray-light: #f0ede8;
+      --shadow: 0 2px 8px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ---- HEADER ---- */
+    header {
+      background: var(--surface);
+      border-bottom: 2px solid var(--border);
+      padding: 18px 32px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-left h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6em;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    .header-left p {
+      font-size: 0.78em;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .btn {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.82em;
+      font-weight: 600;
+      border: none;
+      border-radius: 7px;
+      padding: 8px 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: var(--accent-blue); color: #fff; }
+    .btn-primary:hover { background: #163f70; }
+    .btn-danger { background: var(--accent-red); color: #fff; }
+    .btn-danger:hover { background: #8f1515; }
+
+    /* ---- DASHBOARD STRIP ---- */
+    .dashboard-strip {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 32px;
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+    .dash-label { font-size: 0.75em; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
+    .dash-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+    .dash-stat {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 0.88em; font-weight: 600;
+    }
+    .dash-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .dash-dot.gray { background: var(--gray); }
+    .dash-dot.yellow { background: #e6a817; }
+    .dash-dot.red { background: var(--accent-red); }
+    .dash-dot.green { background: var(--accent-green); }
+    .dash-divider {
+      width: 1px; background: var(--border); align-self: stretch; margin: 0 4px;
+    }
+    .laws-label {
+      font-size: 0.75em; color: var(--text-muted); font-weight: 500;
+      text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;
+    }
+    .laws-list {
+      display: flex; flex-wrap: wrap; gap: 5px; align-items: center;
+    }
+    .law-chip {
+      font-size: 0.75em; font-weight: 700; padding: 2px 8px;
+      border-radius: 20px; background: var(--accent-green-light);
+      color: var(--accent-green); border: 1px solid #b2dcc0;
+      white-space: nowrap;
+    }
+    .laws-empty {
+      font-size: 0.78em; color: var(--text-muted); font-style: italic;
+    }
+
+    /* ---- MAIN LAYOUT ---- */
+    main { padding: 24px 32px; max-width: 1600px; margin: 0 auto; }
+
+    /* ---- FLOOR SCHEDULE ---- */
+    .floor-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .floor-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .floor-panel-header {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .floor-panel-header h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1em;
+      font-weight: 600;
+    }
+    .floor-panel.house .floor-panel-header { background: var(--accent-green-light); border-color: #c2dfc9; }
+    .floor-panel.senate .floor-panel-header { background: var(--accent-blue-light); border-color: #c0d5ee; }
+    .floor-panel-body { padding: 14px 16px; }
+    .floor-form { display: flex; flex-direction: column; gap: 10px; }
+    .floor-form label { font-size: 0.78em; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+    .floor-form input, .floor-form select {
+      width: 100%; padding: 7px 10px; border: 1px solid var(--border);
+      border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.88em;
+      background: var(--surface-alt); color: var(--text);
+      transition: border-color 0.15s;
+    }
+    .floor-form input:focus, .floor-form select:focus { outline: none; border-color: var(--accent-blue); }
+    .floor-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .floor-schedule-list { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+    .floor-schedule-list h4 { font-size: 0.78em; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .schedule-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 10px; margin-bottom: 5px; border-radius: 6px;
+      background: var(--surface-alt); border: 1px solid var(--border);
+      font-size: 0.85em;
+    }
+    .schedule-item .bill-tag {
+      font-weight: 600; color: var(--accent-blue);
+    }
+    .schedule-item .meta { color: var(--text-muted); font-size: 0.82em; }
+    .schedule-item .remove-btn {
+      background: none; border: none; cursor: pointer; color: var(--accent-red);
+      font-size: 1em; padding: 0 4px; line-height: 1;
+    }
+    .schedule-item .rule-tag {
+      font-size: 0.75em; font-weight: 600; padding: 2px 7px; border-radius: 4px;
+    }
+    .rule-tag.open { background: var(--accent-green-light); color: var(--accent-green); }
+    .rule-tag.closed { background: var(--accent-red-light); color: var(--accent-red); }
+    .add-schedule-btn {
+      width: 100%; margin-top: 6px; padding: 7px; border: 1.5px dashed var(--border-strong);
+      background: none; border-radius: 6px; cursor: pointer; font-size: 0.82em;
+      color: var(--text-muted); font-family: 'DM Sans', sans-serif; font-weight: 600;
+      transition: all 0.15s;
+    }
+    .add-schedule-btn:hover { background: var(--surface-alt); color: var(--text); }
+
+    /* ---- COMMITTEE PANELS ---- */
+    .committee-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .committee-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .committee-panel-header {
+      padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; border-bottom: 1px solid var(--border);
+      user-select: none;
+    }
+    .committee-panel.house .committee-panel-header { background: var(--accent-green-light); }
+    .committee-panel.senate .committee-panel-header { background: var(--accent-blue-light); }
+    .committee-panel-header h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.95em; font-weight: 600;
+    }
+    .toggle-arrow { font-size: 0.8em; color: var(--text-muted); transition: transform 0.2s; }
+    .committee-panel-body { padding: 10px 14px; max-height: 220px; overflow-y: auto; }
+    .committee-panel-body.collapsed { display: none; }
+    .committee-bill-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 8px; margin-bottom: 4px; border-radius: 6px;
+      font-size: 0.85em; background: var(--surface-alt); border: 1px solid var(--border);
+    }
+    .committee-bill-item .bill-num { font-weight: 600; }
+    .badge {
+      font-size: 0.7em; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+    }
+    .badge.amend { background: var(--accent-amber-light); color: var(--accent-amber); }
+    .badge.cross { background: var(--accent-blue-light); color: var(--accent-blue); }
+
+    /* ---- PRESIDENTIAL QUEUE ---- */
+    .presq-panel {
+      background: var(--surface);
+      border: 1.5px solid #d4a843;
+      border-radius: var(--radius);
+      box-shadow: 0 2px 12px rgba(180,130,0,0.10);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .presq-header {
+      background: linear-gradient(90deg, #fffbf0 0%, #fef3d0 100%);
+      border-bottom: 1.5px solid #e8c96a;
+      padding: 12px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; user-select: none;
+    }
+    .presq-header h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.95em; font-weight: 700;
+      color: #7a5000;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .presq-count {
+      font-size: 0.72em; font-weight: 700; padding: 2px 9px;
+      border-radius: 20px; background: #f5d87a; color: #7a5000;
+      margin-left: 6px;
+    }
+    .presq-body {
+      padding: 12px 16px;
+      display: flex; flex-wrap: wrap; gap: 8px;
+      min-height: 48px;
+    }
+    .presq-body.collapsed { display: none; }
+    .presq-empty {
+      font-size: 0.82em; color: var(--text-muted); font-style: italic;
+      align-self: center;
+    }
+    .presq-item {
+      display: flex; align-items: center; gap: 7px;
+      padding: 6px 12px; border-radius: 7px;
+      background: #fffbf0; border: 1.5px solid #e8c96a;
+      font-size: 0.85em; font-weight: 600; color: #7a5000;
+    }
+    .presq-item .presq-icon { font-size: 1em; }
+
+    /* ---- BILL GRID ---- */
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1em; font-weight: 600; margin-bottom: 14px;
+      color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 8px;
+    }
+    .bill-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 14px;
+    }
+
+    /* ---- BILL CARD ---- */
+    .bill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      transition: box-shadow 0.15s;
+    }
+    .bill:hover { box-shadow: var(--shadow-md); }
+    .bill-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .bill-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1em; font-weight: 600;
+    }
+    .status-pill {
+      font-size: 0.7em; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .status-pill.gray { background: var(--gray-light); color: var(--gray); }
+    .status-pill.yellow { background: #fef8e7; color: #b87800; }
+    .status-pill.red { background: var(--accent-red-light); color: var(--accent-red); }
+    .status-pill.green { background: var(--accent-green-light); color: var(--accent-green); }
+
+    /* Actions grid */
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 4px;
+    }
+    .light-wrapper {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .light {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--gray-light); border: 2px solid var(--border);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .light:hover { transform: scale(1.15); }
+    .light.green { background: var(--accent-green); border-color: #146030; }
+    .light.red { background: var(--accent-red); border-color: #8f1515; }
+    .light.gray { background: var(--gray-light); border-color: var(--border); }
+    .light-label {
+      font-size: 0.55em; color: var(--text-muted); text-align: center;
+      line-height: 1.2; font-weight: 500;
+    }
+
+    /* Amendment section */
+    .amendment-section {
+      margin-top: 12px;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+    .amendment-toggle {
+      display: flex; align-items: center; gap: 8px; cursor: pointer;
+      font-size: 0.8em; font-weight: 600; color: var(--accent-amber); user-select: none;
+    }
+    .amendment-toggle .amend-icon { font-size: 1.1em; }
+    .amendment-body { margin-top: 8px; display: flex; flex-direction: column; gap: 7px; }
+    .amendment-body.collapsed { display: none; }
+    .amend-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .amend-tag-btn {
+      font-size: 0.72em; font-weight: 600; padding: 3px 9px; border-radius: 5px;
+      border: 1.5px solid var(--border); background: var(--surface-alt);
+      cursor: pointer; transition: all 0.12s; color: var(--text-muted);
+      font-family: 'DM Sans', sans-serif;
+    }
+    .amend-tag-btn.active { background: var(--accent-amber-light); color: var(--accent-amber); border-color: #e0b060; }
+    .amend-note {
+      width: 100%; padding: 6px 9px; border: 1px solid var(--border);
+      border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.82em;
+      background: var(--surface-alt); color: var(--text); resize: vertical;
+      min-height: 50px; transition: border-color 0.15s;
+    }
+    .amend-note:focus { outline: none; border-color: var(--accent-amber); }
+
+    /* Notes section */
+    .notes-section {
+      margin-top: 8px;
+    }
+    .notes-toggle {
+      display: flex; align-items: center; gap: 6px; cursor: pointer;
+      font-size: 0.78em; font-weight: 600; color: var(--text-muted); user-select: none;
+    }
+    .notes-body { margin-top: 6px; }
+    .notes-body.collapsed { display: none; }
+    .bill-note {
+      width: 100%; padding: 6px 9px; border: 1px solid var(--border);
+      border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.82em;
+      background: var(--surface-alt); color: var(--text); resize: vertical;
+      min-height: 44px; transition: border-color 0.15s;
+    }
+    .bill-note:focus { outline: none; border-color: var(--accent-blue); }
+
+    /* ---- SCROLLBAR ---- */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface-alt); }
+    ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+
+    /* ---- RESPONSIVE ---- */
+    @media (max-width: 700px) {
+      header { padding: 12px 16px; }
+      main { padding: 16px; }
+      .floor-section, .committee-section { grid-template-columns: 1fr; }
+      .actions { grid-template-columns: repeat(5, 1fr); }
+    }
   </style>
 </head>
 
 <body>
-  <h1>Congressional Lightboard Tracker</h1>
 
-  <div class="top-container">
-    <div class="committee-panel house-panel">
-      <h3 onclick="this.nextElementSibling.classList.toggle('collapsed')">🏛️ House Committee Passed</h3>
-      <div id="houseCommitteeList" class="committee-list"></div>
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <h1>Congressional Lightboard</h1>
+      <p>Congress Simulation — Bill Tracker</p>
     </div>
-    <div class="committee-panel senate-panel">
-      <h3 onclick="this.nextElementSibling.classList.toggle('collapsed')">🏛️ Senate Committee Passed</h3>
-      <div id="senateCommitteeList" class="committee-list"></div>
+    <div class="header-actions">
+      <button class="btn btn-danger" id="resetBtn">↺ Reset All</button>
+      <button class="btn btn-primary" id="saveBtn">☁ Save to Cloud</button>
+    </div>
+  </header>
+
+  <!-- DASHBOARD STRIP -->
+  <div class="dashboard-strip">
+    <span class="dash-label">Status</span>
+    <div class="dash-stats" id="dashboard">
+      <span class="dash-stat"><span class="dash-dot gray"></span><span id="statNoAction">No Action: 0</span></span>
+      <span class="dash-stat"><span class="dash-dot yellow"></span><span id="statInProgress">In Progress: 0</span></span>
+      <span class="dash-stat"><span class="dash-dot red"></span><span id="statFailed">Failed: 0</span></span>
+      <span class="dash-stat"><span class="dash-dot green"></span><span id="statLaw">Law: 0</span></span>
+    </div>
+    <div class="dash-divider"></div>
+    <span class="laws-label">⚖️ Laws Enacted</span>
+    <div class="laws-list" id="lawsList">
+      <span class="laws-empty">None yet</span>
     </div>
   </div>
 
-  <div class="controls">
-    <button id="resetBtn">🔁 Reset All Bills</button>
-    <button id="saveBtn">☁️ Save to Cloud</button>
-  </div>
+  <main>
 
-  <div class="dashboard" id="dashboard">No Action: 0 | In Progress: 0 | Failed: 0 | Law: 0</div>
-  <div id="lightboard" class="bill-container"></div>
+    <!-- FLOOR SCHEDULES -->
+    <div class="floor-section">
+      <!-- HOUSE FLOOR -->
+      <div class="floor-panel house">
+        <div class="floor-panel-header">
+          <h3>🏛 House Floor Schedule</h3>
+        </div>
+        <div class="floor-panel-body">
+          <div class="floor-form">
+            <div class="floor-form-row">
+              <div>
+                <label>Bill Number</label>
+                <input type="number" id="hBillNum" placeholder="e.g. 142" min="101" max="280" />
+              </div>
+              <div>
+                <label>Session</label>
+                <input type="text" id="hSession" placeholder="e.g. Morning" />
+              </div>
+            </div>
+            <div class="floor-form-row">
+              <div>
+                <label>Time Limit</label>
+                <input type="text" id="hTimeLimit" placeholder="e.g. 20 min" />
+              </div>
+              <div>
+                <label>Rule</label>
+                <select id="hRule">
+                  <option value="open">Open Rule</option>
+                  <option value="closed">Closed Rule</option>
+                </select>
+              </div>
+            </div>
+            <button class="add-schedule-btn" id="addHouseSchedule">+ Add to House Schedule</button>
+          </div>
+          <div class="floor-schedule-list">
+            <h4>Upcoming Bills</h4>
+            <div id="houseScheduleList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SENATE FLOOR -->
+      <div class="floor-panel senate">
+        <div class="floor-panel-header">
+          <h3>🏛 Senate Floor Schedule</h3>
+        </div>
+        <div class="floor-panel-body">
+          <div class="floor-form">
+            <div class="floor-form-row">
+              <div>
+                <label>Bill Number</label>
+                <input type="number" id="sBillNum" placeholder="e.g. 142" min="101" max="280" />
+              </div>
+              <div>
+                <label>Order</label>
+                <input type="number" id="sOrder" placeholder="e.g. 1" min="1" />
+              </div>
+            </div>
+            <button class="add-schedule-btn" id="addSenateSchedule">+ Add to Senate Schedule</button>
+          </div>
+          <div class="floor-schedule-list">
+            <h4>Upcoming Bills</h4>
+            <div id="senateScheduleList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMMITTEE PANELS -->
+    <div class="committee-section">
+      <div class="committee-panel house">
+        <div class="committee-panel-header" onclick="togglePanel(this)">
+          <h3>🏛 House Committee Passed</h3>
+          <span class="toggle-arrow">▼</span>
+        </div>
+        <div id="houseCommitteeList" class="committee-panel-body"></div>
+      </div>
+      <div class="committee-panel senate">
+        <div class="committee-panel-header" onclick="togglePanel(this)">
+          <h3>🏛 Senate Committee Passed</h3>
+          <span class="toggle-arrow">▼</span>
+        </div>
+        <div id="senateCommitteeList" class="committee-panel-body"></div>
+      </div>
+    </div>
+
+    <!-- PRESIDENTIAL SIGNATURE QUEUE -->
+    <div class="presq-panel">
+      <div class="presq-header" onclick="togglePresQ(this)">
+        <h3>🖊 Awaiting Presidential Signature <span class="presq-count" id="presqCount">0</span></h3>
+        <span class="toggle-arrow">▼</span>
+      </div>
+      <div class="presq-body" id="presqList">
+        <span class="presq-empty">No bills currently awaiting signature.</span>
+      </div>
+    </div>
+
+    <!-- BILL GRID -->
+    <div class="section-title">All Bills</div>
+    <div id="lightboard" class="bill-container"></div>
+
+  </main>
 
   <script>
     // ---- Firebase Init ----
@@ -75,29 +559,92 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // ---- Core Logic ----
-    const CLASS_ID = "ClassD";
+    const CLASS_ID = "ClassA_180";
+
     const actionList = [
-      { name: "Introduced (H)", key: "introH" },
-      { name: "Introduced (S)", key: "introS" },
-      { name: "Committee (H)", key: "commH" },
-      { name: "Committee (S)", key: "commS" },
-      { name: "Amendments (H)", key: "amendH" },
-      { name: "Amendments (S)", key: "amendS" },
-      { name: "Passed (H)", key: "passedH" },
-      { name: "Passed (S)", key: "passedS" },
-      { name: "Signed (P)", key: "signedP" }
+      { name: "Intro (H)",   key: "introH" },
+      { name: "Intro (S)",   key: "introS" },
+      { name: "Comm (H)",    key: "commH" },
+      { name: "Comm (S)",    key: "commS" },
+      { name: "Amend (H)",   key: "amendH" },
+      { name: "Amend (S)",   key: "amendS" },
+      { name: "Pass (H)",    key: "passedH" },
+      { name: "Pass (S)",    key: "passedS" },
+      { name: "Sign (P)",    key: "signedP" }
     ];
+
+    const AMEND_TAGS = ["Friendly", "Hostile", "Substitute", "Technical"];
+
     let houseSelectionOrder = [];
     let senateSelectionOrder = [];
+    let houseSchedule = [];
+    let senateSchedule = [];
 
+    // ---- Toggle committee panel ----
+    function togglePanel(header) {
+      const body = header.nextElementSibling;
+      const arrow = header.querySelector('.toggle-arrow');
+      body.classList.toggle('collapsed');
+      arrow.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
+    }
+
+    function togglePresQ(header) {
+      const body = header.nextElementSibling;
+      const arrow = header.querySelector('.toggle-arrow');
+      body.classList.toggle('collapsed');
+      arrow.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
+    }
+
+    function updatePresidentialQueue() {
+      const list = document.getElementById("presqList");
+      const countBadge = document.getElementById("presqCount");
+      const allBills = document.querySelectorAll(".bill");
+      const readyBills = [];
+
+      allBills.forEach(bill => {
+        const getColor = k => bill.lights.find(l => l.dataset.key === k)?.classList[1];
+        const passedH = getColor("passedH");
+        const passedS = getColor("passedS");
+        const signedP = getColor("signedP");
+        // Both chambers passed (green), and not yet signed or vetoed
+        if (passedH === "green" && passedS === "green" && signedP === "gray") {
+          readyBills.push(bill.querySelector("h2").textContent);
+        }
+      });
+
+      list.innerHTML = "";
+      countBadge.textContent = readyBills.length;
+
+      if (readyBills.length === 0) {
+        list.innerHTML = `<span class="presq-empty">No bills currently awaiting signature.</span>`;
+      } else {
+        readyBills.forEach(num => {
+          const div = document.createElement("div");
+          div.className = "presq-item";
+          div.innerHTML = `<span class="presq-icon">📜</span><span>${num}</span>`;
+          list.appendChild(div);
+        });
+      }
+    }
+
+    // ---- Create Bill Card ----
     function createBillElement(billNumber, savedData) {
       const billDiv = document.createElement("div");
       billDiv.className = "bill";
+
+      // Header
+      const header = document.createElement("div");
+      header.className = "bill-header";
       const title = document.createElement("h2");
       title.textContent = "Bill " + billNumber;
-      billDiv.appendChild(title);
+      const statusPill = document.createElement("div");
+      statusPill.className = "status-pill gray";
+      statusPill.textContent = "No Action";
+      header.appendChild(title);
+      header.appendChild(statusPill);
+      billDiv.appendChild(header);
 
+      // Actions
       const actionsDiv = document.createElement("div");
       actionsDiv.className = "actions";
       const lights = [];
@@ -109,42 +656,132 @@
         light.className = "light gray";
         light.dataset.key = actionObj.key;
         light.title = actionObj.name;
-        wrap.appendChild(light);
-        const label = document.createElement("div");
-        label.style.fontSize = "0.65em";
-        label.textContent = actionObj.name;
-        wrap.appendChild(label);
 
         light.addEventListener("click", () => {
-          const current = light.classList.contains("gray") ? "gray" :
-            light.classList.contains("green") ? "green" : "red";
+          const current = light.classList.contains("green") ? "green" :
+                          light.classList.contains("red") ? "red" : "gray";
           const next = current === "gray" ? "green" : current === "green" ? "red" : "gray";
           light.className = `light ${next}`;
           updateOverallStatus(billDiv);
           updateCommitteeLists();
           updateDashboard();
+          updateLawsList();
+          updatePresidentialQueue();
+          // Show amendment section if amendments lit
+          checkAmendVisibility(billDiv);
         });
 
+        const label = document.createElement("div");
+        label.className = "light-label";
+        label.textContent = actionObj.name;
+        wrap.appendChild(light);
+        wrap.appendChild(label);
         actionsDiv.appendChild(wrap);
         lights.push(light);
       });
 
       billDiv.appendChild(actionsDiv);
-      const statusDiv = document.createElement("div");
-      statusDiv.className = "status gray";
-      statusDiv.textContent = "No Action";
-      billDiv.appendChild(statusDiv);
       billDiv.lights = lights;
-      billDiv.statusDiv = statusDiv;
+      billDiv.statusPill = statusPill;
 
+      // Amendment Section
+      const amendSection = document.createElement("div");
+      amendSection.className = "amendment-section";
+      amendSection.style.display = "none"; // hidden by default
+
+      const amendToggle = document.createElement("div");
+      amendToggle.className = "amendment-toggle";
+      amendToggle.innerHTML = `<span class="amend-icon">✏️</span><span>Amendment Details</span><span style="margin-left:auto;font-size:0.9em;">▼</span>`;
+
+      const amendBody = document.createElement("div");
+      amendBody.className = "amendment-body collapsed";
+
+      // Tags row
+      const tagsRow = document.createElement("div");
+      tagsRow.className = "amend-tags";
+      const activeTags = new Set();
+      AMEND_TAGS.forEach(tag => {
+        const btn = document.createElement("button");
+        btn.className = "amend-tag-btn";
+        btn.textContent = tag;
+        btn.addEventListener("click", () => {
+          if (activeTags.has(tag)) { activeTags.delete(tag); btn.classList.remove("active"); }
+          else { activeTags.add(tag); btn.classList.add("active"); }
+        });
+        tagsRow.appendChild(btn);
+        btn._tagName = tag;
+      });
+
+      // Note
+      const amendNote = document.createElement("textarea");
+      amendNote.className = "amend-note";
+      amendNote.placeholder = "Describe the amendment(s)…";
+
+      amendBody.appendChild(tagsRow);
+      amendBody.appendChild(amendNote);
+
+      amendToggle.addEventListener("click", () => {
+        amendBody.classList.toggle("collapsed");
+        amendToggle.querySelector("span:last-child").textContent =
+          amendBody.classList.contains("collapsed") ? "▼" : "▲";
+      });
+
+      amendSection.appendChild(amendToggle);
+      amendSection.appendChild(amendBody);
+      billDiv.appendChild(amendSection);
+      billDiv.amendSection = amendSection;
+      billDiv.amendNote = amendNote;
+      billDiv.amendTags = { set: activeTags, buttons: tagsRow.querySelectorAll(".amend-tag-btn") };
+
+      // General Notes Section
+      const notesSection = document.createElement("div");
+      notesSection.className = "notes-section";
+      const notesToggle = document.createElement("div");
+      notesToggle.className = "notes-toggle";
+      notesToggle.innerHTML = `<span>📝</span><span>Notes</span><span style="margin-left:auto;">▼</span>`;
+      const notesBody = document.createElement("div");
+      notesBody.className = "notes-body collapsed";
+      const billNote = document.createElement("textarea");
+      billNote.className = "bill-note";
+      billNote.placeholder = "Add notes for this bill…";
+      notesBody.appendChild(billNote);
+      notesToggle.addEventListener("click", () => {
+        notesBody.classList.toggle("collapsed");
+        notesToggle.querySelector("span:last-child").textContent =
+          notesBody.classList.contains("collapsed") ? "▼" : "▲";
+      });
+      notesSection.appendChild(notesToggle);
+      notesSection.appendChild(notesBody);
+      billDiv.appendChild(notesSection);
+      billDiv.billNote = billNote;
+
+      // Load saved data
       if (savedData) {
         actionList.forEach((a, i) => {
-          if (savedData[i]) lights[i].className = `light ${savedData[i]}`;
+          if (savedData.lights && savedData.lights[i]) lights[i].className = `light ${savedData.lights[i]}`;
         });
+        if (savedData.amendNote) amendNote.value = savedData.amendNote;
+        if (savedData.billNote) billNote.value = savedData.billNote;
+        if (savedData.amendTags) {
+          savedData.amendTags.forEach(tag => {
+            activeTags.add(tag);
+            tagsRow.querySelectorAll(".amend-tag-btn").forEach(btn => {
+              if (btn._tagName === tag) btn.classList.add("active");
+            });
+          });
+        }
         updateOverallStatus(billDiv);
+        checkAmendVisibility(billDiv);
       }
 
       return billDiv;
+    }
+
+    function checkAmendVisibility(billDiv) {
+      const amendH = billDiv.lights.find(l => l.dataset.key === "amendH");
+      const amendS = billDiv.lights.find(l => l.dataset.key === "amendS");
+      const hasAmend = amendH?.classList.contains("green") || amendS?.classList.contains("green");
+      billDiv.amendSection.style.display = hasAmend ? "block" : "none";
     }
 
     function updateOverallStatus(billDiv) {
@@ -154,14 +791,14 @@
       const passedH = getColor("passedH"), passedS = getColor("passedS"), signedP = getColor("signedP");
       const introduced = introH === "green" || introS === "green";
       const bothFailed = passedH === "red" && passedS === "red";
-      const bothPassed = passedH === "green" && passedS === "green";
       const failedPresident = signedP === "red";
+      const bothPassed = passedH === "green" && passedS === "green";
       let color = "yellow", text = "In Progress";
       if (!introduced) { color = "gray"; text = "No Action"; }
       else if (bothFailed || failedPresident) { color = "red"; text = "Failed"; }
       else if (bothPassed && signedP === "green") { color = "green"; text = "Law"; }
-      billDiv.statusDiv.className = `status ${color}`;
-      billDiv.statusDiv.textContent = text;
+      billDiv.statusPill.className = `status-pill ${color}`;
+      billDiv.statusPill.textContent = text;
     }
 
     function updateCommitteeLists() {
@@ -178,9 +815,11 @@
         const passedH = getColor("passedH"), passedS = getColor("passedS");
         const amendH = getColor("amendH"), amendS = getColor("amendS");
         const billNum = bill.querySelector("h2").textContent;
+
         if (commH === "green" || passedS === "green") {
           if (!houseSelectionOrder.includes(billNum)) houseSelectionOrder.push(billNum);
         } else { houseSelectionOrder = houseSelectionOrder.filter(n => n !== billNum); }
+
         if (commS === "green" || passedH === "green") {
           if (!senateSelectionOrder.includes(billNum)) senateSelectionOrder.push(billNum);
         } else { senateSelectionOrder = senateSelectionOrder.filter(n => n !== billNum); }
@@ -188,18 +827,27 @@
 
       houseSelectionOrder.forEach(num => {
         const bill = Array.from(allBills).find(b => b.querySelector("h2").textContent === num);
+        if (!bill) return;
         const amendH = bill.lights.find(l => l.dataset.key === "amendH").classList[1];
         const passedS = bill.lights.find(l => l.dataset.key === "passedS").classList[1];
         const div = document.createElement("div");
-        div.textContent = num + (amendH === "green" ? " *" : "") + (passedS === "green" ? " +" : "");
+        div.className = "committee-bill-item";
+        div.innerHTML = `<span class="bill-num">${num}</span>`;
+        if (amendH === "green") div.innerHTML += `<span class="badge amend">Amend</span>`;
+        if (passedS === "green") div.innerHTML += `<span class="badge cross">Senate ✓</span>`;
         houseList.appendChild(div);
       });
+
       senateSelectionOrder.forEach(num => {
         const bill = Array.from(allBills).find(b => b.querySelector("h2").textContent === num);
+        if (!bill) return;
         const amendS = bill.lights.find(l => l.dataset.key === "amendS").classList[1];
         const passedH = bill.lights.find(l => l.dataset.key === "passedH").classList[1];
         const div = document.createElement("div");
-        div.textContent = num + (amendS === "green" ? " *" : "") + (passedH === "green" ? " +" : "");
+        div.className = "committee-bill-item";
+        div.innerHTML = `<span class="bill-num">${num}</span>`;
+        if (amendS === "green") div.innerHTML += `<span class="badge amend">Amend</span>`;
+        if (passedH === "green") div.innerHTML += `<span class="badge cross">House ✓</span>`;
         senateList.appendChild(div);
       });
     }
@@ -208,25 +856,121 @@
       const allBills = document.querySelectorAll(".bill");
       let noAction = 0, inProgress = 0, failed = 0, law = 0;
       allBills.forEach(bill => {
-        const s = bill.statusDiv.textContent;
+        const s = bill.statusPill.textContent;
         if (s === "No Action") noAction++;
         else if (s === "In Progress") inProgress++;
         else if (s === "Failed") failed++;
         else if (s === "Law") law++;
       });
-      document.getElementById("dashboard").textContent =
-        `No Action: ${noAction} | In Progress: ${inProgress} | Failed: ${failed} | Law: ${law}`;
+      document.getElementById("statNoAction").textContent = `No Action: ${noAction}`;
+      document.getElementById("statInProgress").textContent = `In Progress: ${inProgress}`;
+      document.getElementById("statFailed").textContent = `Failed: ${failed}`;
+      document.getElementById("statLaw").textContent = `Law: ${law}`;
     }
 
+    function updateLawsList() {
+      const lawsList = document.getElementById("lawsList");
+      const allBills = document.querySelectorAll(".bill");
+      const enacted = [];
+      allBills.forEach(bill => {
+        const getColor = k => bill.lights.find(l => l.dataset.key === k)?.classList[1];
+        if (getColor("signedP") === "green") {
+          enacted.push(bill.querySelector("h2").textContent);
+        }
+      });
+      lawsList.innerHTML = "";
+      if (enacted.length === 0) {
+        lawsList.innerHTML = `<span class="laws-empty">None yet</span>`;
+      } else {
+        enacted.forEach(num => {
+          const chip = document.createElement("span");
+          chip.className = "law-chip";
+          chip.textContent = num;
+          lawsList.appendChild(chip);
+        });
+      }
+    }
+
+    // ---- Floor Schedule ----
+    function renderHouseSchedule() {
+      const list = document.getElementById("houseScheduleList");
+      list.innerHTML = "";
+      houseSchedule.forEach((item, idx) => {
+        const div = document.createElement("div");
+        div.className = "schedule-item";
+        div.innerHTML = `
+          <span class="bill-tag">Bill ${item.bill}</span>
+          <span class="meta">${item.session} · ${item.timeLimit}</span>
+          <span class="rule-tag ${item.rule}">${item.rule === "open" ? "Open" : "Closed"} Rule</span>
+          <button class="remove-btn" data-idx="${idx}" data-type="house">✕</button>
+        `;
+        list.appendChild(div);
+      });
+      list.querySelectorAll(".remove-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          houseSchedule.splice(parseInt(btn.dataset.idx), 1);
+          renderHouseSchedule();
+          saveSchedulesToFirebase();
+        });
+      });
+    }
+
+    function renderSenateSchedule() {
+      const list = document.getElementById("senateScheduleList");
+      list.innerHTML = "";
+      senateSchedule.forEach((item, idx) => {
+        const div = document.createElement("div");
+        div.className = "schedule-item";
+        div.innerHTML = `
+          <span class="bill-tag">Bill ${item.bill}</span>
+          <span class="meta">Order: ${item.order}</span>
+          <button class="remove-btn" data-idx="${idx}" data-type="senate">✕</button>
+        `;
+        list.appendChild(div);
+      });
+      list.querySelectorAll(".remove-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          senateSchedule.splice(parseInt(btn.dataset.idx), 1);
+          renderSenateSchedule();
+          saveSchedulesToFirebase();
+        });
+      });
+    }
+
+    async function saveSchedulesToFirebase() {
+      try {
+        await db.collection("lightboard").doc(CLASS_ID + "_schedules").set({
+          houseSchedule, senateSchedule
+        });
+      } catch (e) { console.error("Schedule save failed:", e); }
+    }
+
+    async function loadSchedulesFromFirebase() {
+      try {
+        const doc = await db.collection("lightboard").doc(CLASS_ID + "_schedules").get();
+        if (doc.exists) {
+          houseSchedule = doc.data().houseSchedule || [];
+          senateSchedule = doc.data().senateSchedule || [];
+        }
+      } catch (e) { console.error("Schedule load failed:", e); }
+    }
+
+    // ---- Firebase Save / Load ----
     async function saveToFirebase() {
       const allBills = document.querySelectorAll(".bill");
       const saveObj = {};
       allBills.forEach(b => {
         const num = b.querySelector("h2").textContent.split(" ")[1];
-        saveObj[num] = [...b.querySelectorAll(".light")].map(l => l.classList[1]);
+        saveObj[num] = {
+          lights: [...b.querySelectorAll(".light")].map(l => l.classList[1]),
+          amendNote: b.amendNote.value,
+          billNote: b.billNote.value,
+          amendTags: [...b.amendTags.set]
+        };
       });
       try {
         await db.collection("lightboard").doc(CLASS_ID).set({ data: saveObj });
+        await saveSchedulesToFirebase();
         alert("✅ Progress saved to Firebase");
       } catch (e) { alert("❌ Save failed: " + e.message); }
     }
@@ -237,26 +981,59 @@
     }
 
     function resetAll() {
-      if (confirm("Reset all bills?")) {
+      if (confirm("Reset all bills? This cannot be undone.")) {
         db.collection("lightboard").doc(CLASS_ID).set({ data: {} });
+        db.collection("lightboard").doc(CLASS_ID + "_schedules").set({ houseSchedule: [], senateSchedule: [] });
         location.reload();
       }
     }
 
+    // ---- Init ----
     async function initializeBoard() {
       const savedData = await loadFromFirebase();
+      await loadSchedulesFromFirebase();
       const lightboard = document.getElementById("lightboard");
       for (let i = 101; i <= 280; i++) {
         lightboard.appendChild(createBillElement(i, savedData[i]));
       }
       updateDashboard();
+      updateLawsList();
       updateCommitteeLists();
+      updatePresidentialQueue();
+      renderHouseSchedule();
+      renderSenateSchedule();
     }
 
     document.addEventListener("DOMContentLoaded", () => {
       initializeBoard();
+
       document.getElementById("saveBtn").addEventListener("click", saveToFirebase);
       document.getElementById("resetBtn").addEventListener("click", resetAll);
+
+      document.getElementById("addHouseSchedule").addEventListener("click", () => {
+        const bill = document.getElementById("hBillNum").value.trim();
+        const session = document.getElementById("hSession").value.trim();
+        const timeLimit = document.getElementById("hTimeLimit").value.trim();
+        const rule = document.getElementById("hRule").value;
+        if (!bill) { alert("Please enter a bill number."); return; }
+        houseSchedule.push({ bill, session: session || "—", timeLimit: timeLimit || "—", rule });
+        renderHouseSchedule();
+        saveSchedulesToFirebase();
+        document.getElementById("hBillNum").value = "";
+        document.getElementById("hSession").value = "";
+        document.getElementById("hTimeLimit").value = "";
+      });
+
+      document.getElementById("addSenateSchedule").addEventListener("click", () => {
+        const bill = document.getElementById("sBillNum").value.trim();
+        const order = document.getElementById("sOrder").value.trim();
+        if (!bill) { alert("Please enter a bill number."); return; }
+        senateSchedule.push({ bill, order: order || senateSchedule.length + 1 });
+        renderSenateSchedule();
+        saveSchedulesToFirebase();
+        document.getElementById("sBillNum").value = "";
+        document.getElementById("sOrder").value = "";
+      });
     });
   </script>
 </body>
