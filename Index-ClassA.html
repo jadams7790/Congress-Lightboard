@@ -954,8 +954,33 @@
       } catch (e) { console.error("Schedule load failed:", e); }
     }
 
+    // ---- PIN Auth ----
+    // To change the PIN: run this in any browser console to get a new hash:
+    //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('YOUR_PIN'))
+    //     .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
+    // Then replace the PIN_HASH value below with the result.
+    // Default PIN is 1234:
+    const PIN_HASH = "4b9a7f50c0bb198c6f5414c5a8459f5d216d34ab521ea94c060ea35cac66f900";
+
+    async function hashPin(pin) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pin));
+      return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function checkPin() {
+      const entered = prompt("Enter instructor PIN to continue:");
+      if (entered === null) return false; // cancelled
+      const hashed = await hashPin(entered.trim());
+      if (hashed !== PIN_HASH) {
+        alert("❌ Incorrect PIN.");
+        return false;
+      }
+      return true;
+    }
+
     // ---- Firebase Save / Load ----
     async function saveToFirebase() {
+      if (!await checkPin()) return;
       const allBills = document.querySelectorAll(".bill");
       const saveObj = {};
       allBills.forEach(b => {
@@ -980,6 +1005,7 @@
     }
 
     async function resetAll() {
+      if (!await checkPin()) return;
       if (confirm("Reset all bills? This cannot be undone.")) {
         try {
           await db.collection("lightboard").doc(CLASS_ID).set({ data: {} });
@@ -1013,12 +1039,13 @@
       document.getElementById("saveBtn").addEventListener("click", saveToFirebase);
       document.getElementById("resetBtn").addEventListener("click", resetAll);
 
-      document.getElementById("addHouseSchedule").addEventListener("click", () => {
+      document.getElementById("addHouseSchedule").addEventListener("click", async () => {
         const bill = document.getElementById("hBillNum").value.trim();
         const session = document.getElementById("hSession").value.trim();
         const timeLimit = document.getElementById("hTimeLimit").value.trim();
         const rule = document.getElementById("hRule").value;
         if (!bill) { alert("Please enter a bill number."); return; }
+        if (!await checkPin()) return;
         houseSchedule.push({ bill, session: session || "—", timeLimit: timeLimit || "—", rule });
         renderHouseSchedule();
         saveSchedulesToFirebase();
@@ -1027,10 +1054,11 @@
         document.getElementById("hTimeLimit").value = "";
       });
 
-      document.getElementById("addSenateSchedule").addEventListener("click", () => {
+      document.getElementById("addSenateSchedule").addEventListener("click", async () => {
         const bill = document.getElementById("sBillNum").value.trim();
         const order = document.getElementById("sOrder").value.trim();
         if (!bill) { alert("Please enter a bill number."); return; }
+        if (!await checkPin()) return;
         senateSchedule.push({ bill, order: order || senateSchedule.length + 1 });
         renderSenateSchedule();
         saveSchedulesToFirebase();
